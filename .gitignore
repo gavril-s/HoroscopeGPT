@@ -1,6 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,virtualenv,visualstudio,visualstudiocode,windows,git
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,virtualenv,visualstudio,visualstudiocode,windows,git
 
+### HoroscopeGPT ###
+user_signs.pkl
+.env
+
 ### Git ###
 # Created by git for backups. To disable backups in Git:
 # $ git config --global mergetool.keepBackup false
