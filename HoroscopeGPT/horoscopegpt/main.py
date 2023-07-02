@@ -48,20 +48,19 @@ class HoroscopeGPTState(Enum):
 
 
 class HoroscopeGPT:
-    def __init__(self, temp=0.9, hour=7):
+    def __init__(self, temp=0.9, send_time=datetime.time(hour=10)):
         self.temp = temp
-        self.hour = hour
+        self.send_time = send_time
         self.state = HoroscopeGPTState.DEFAULT
         self.load_users_signs()
         self.init_llm()
         self.init_bot()
 
     def load_users_signs(self):
-        if not os.path.exists("user_signs.pkl"):
-            self.users_signs = dict()
-        else:
-            with open("users_signs.pkl", "wb") as f:
-                pickle.dump(self.users_signs, f)
+        self.users_signs = dict()
+        if os.path.exists("users_signs.pkl"):
+            with open("users_signs.pkl", "rb") as f:
+                self.users_signs = pickle.load(f)
 
     def dump_users_signs(self):
         with open("users_signs.pkl", "wb") as f:
@@ -83,10 +82,11 @@ class HoroscopeGPT:
         handler = MessageHandler(filters.TEXT, self.text_handler)
         self.bot.add_handler(handler)
 
+        logging.info(self.users_signs)
         for chat_id in self.users_signs:
             self.bot.job_queue.run_daily(
                 self.send_horoscope_job,
-                datetime.time(hour=self.hour),
+                self.send_time,
                 data=chat_id,
             )
 
@@ -94,7 +94,11 @@ class HoroscopeGPT:
         self.bot.run_polling()
 
     async def get_horoscope(self, sign):
-        prompt = f"Напиши гороскоп для знака зодиака {sign.value} на {datetime.datetime.now().strftime('%d.%m.%Y')}. Используй не более 200 слов."
+        prompt = (
+            f"Напиши гороскоп для знака зодиака {sign.value} на "
+            + f"{datetime.datetime.now().strftime('%d.%m.%Y')}. "
+            + f"Используй не более 200 слов."
+        )
         return self.llm.predict(prompt)
 
     def shape_keyboard(self, choices, per_row):
@@ -131,15 +135,16 @@ class HoroscopeGPT:
             sign_name = update.message.text[2:]
             for sign in AstrologicalSign:
                 if sign.value == sign_name:
+                    if update.message.chat_id not in self.users_signs:
+                        context.job_queue.run_daily(
+                            self.send_horoscope_job,
+                            self.send_time,
+                            data=update.message.chat_id,
+                        )
                     self.users_signs[update.message.chat_id] = sign
                     self.dump_users_signs()
                     context.job_queue.run_once(
                         self.send_horoscope_job, 0, data=update.message.chat_id
-                    )
-                    context.job_queue.run_daily(
-                        self.send_horoscope_job,
-                        datetime.time(hour=self.hour),
-                        data=update.message.chat_id,
                     )
                     break
         elif self.state == HoroscopeGPTState.WAITING_FOR_TIME:
