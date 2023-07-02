@@ -48,7 +48,7 @@ class HoroscopeGPTState(Enum):
 
 
 class HoroscopeGPT:
-    def __init__(self, temp=0.9, send_time=datetime.time(hour=10)):
+    def __init__(self, temp=0.9, send_time=datetime.time(hour=4)):
         self.temp = temp
         self.send_time = send_time
         self.state = HoroscopeGPTState.DEFAULT
